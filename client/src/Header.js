@@ -20,13 +20,28 @@ export default function Header() {
     });
   }, []);
 
-  function logout() {
-    fetch('http://localhost:4000/logout', {
-      credentials: 'include',
-      method: 'POST',
-    });
-    setUserInfo(null);
+  async function logout() {
+    try {
+      const response = await fetch('http://localhost:4000/logout', {
+        credentials: 'include',
+        method: 'POST',
+      });
+  
+      if (response.ok) {
+        // Clear user information from state
+        setUserInfo(null);
+  
+        // Redirect to the homepage
+        window.location.href = '/';
+      } else {
+        // Handle potential errors during logout
+        console.error('Error logging out:', response.statusText);
+      }
+    } catch (error) {
+      console.error('Error logging out:', error);
+    }
   }
+  
 
   const username = userInfo?.username;
 
