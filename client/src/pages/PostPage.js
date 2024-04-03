@@ -1,23 +1,44 @@
-import {useContext, useEffect, useState} from "react";
-import {useParams} from "react-router-dom";
-import {formatISO9075} from "date-fns";
-import {UserContext} from "../UserContext";
-import {Link} from 'react-router-dom';
+import { useContext, useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { formatISO9075 } from "date-fns";
+import { UserContext } from "../UserContext";
+import { Link } from "react-router-dom";
 
 export default function PostPage() {
-  const [postInfo,setPostInfo] = useState(null);
-  const {userInfo} = useContext(UserContext);
-  const {id} = useParams();
+  const [postInfo, setPostInfo] = useState(null);
+  const { userInfo } = useContext(UserContext);
+  const { id } = useParams();
+  const navigate = useNavigate(); 
+
+  const handleDeletePost = async () => {
+    const confirmed = window.confirm('Are you sure you want to delete this post?');
+    if (!confirmed) return;
+    try {
+      const response = await fetch(`http://localhost:4000/post/${id}`, {
+        method: 'DELETE',
+        credentials: 'include', // Include cookies for authentication
+      });
+
+      if (!response.ok) {
+        throw new Error('Error deleting post'); // Throw an error for handling
+      }
+
+      navigate("/"); // Redirect to home upon successful deletion
+    } catch (error) {
+      console.error('Error deleting post:', error);
+      // Display an error message to the user
+    }
+
+  };
+
   useEffect(() => {
     fetch(`http://localhost:4000/post/${id}`)
-      .then(response => {
-        response.json().then(postInfo => {
-          setPostInfo(postInfo);
-        });
-      });
-  }, []);
+      .then((response) => response.json())
+      .then((postInfo) => setPostInfo(postInfo))
+      .catch((error) => console.error("Error fetching post:", error));
+  }, [id]); // Dependency array ensures fetch runs only when `id` changes
 
-  if (!postInfo) return '';
+  if (!postInfo) return "";
 
   return (
     <div className="post-page">
@@ -32,6 +53,12 @@ export default function PostPage() {
             </svg>
             Edit this post
           </Link>
+          <button className="delete-btn" onClick={() => handleDeletePost(postInfo._id)}>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 13.1A4.5 4.5 0 0112 18h0a4.5 4.5 0 01-2.26-7.86L6 6v12h8zM15 3h6v6M15 3l-6 6 6 6z" />
+            </svg>
+            Delete
+          </button>
         </div>
       )}
       <div className="image">

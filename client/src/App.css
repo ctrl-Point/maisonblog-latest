@@ -153,3 +153,22 @@ div.post-page a.edit-btn{
 a svg{
     height:20px;
 }
+
+.delete-btn {
+    background-color: white;
+    display: inline-flex;
+    width: 20%;
+    align-items: center;
+    gap: 5px;
+    color: black;
+    padding:15px 30px;
+}
+
+.delete-btn:hover {
+    color: #c0392b; /* Darken red on hover */
+  }
+  
+  .delete-btn svg {
+    height: 20px;
+    fill:currentColor; /* Inherit button text color */
+  }

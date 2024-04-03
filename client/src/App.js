@@ -22,6 +22,7 @@ function App() {
           <Route path="/create" element={<CreatePost />} />
           <Route path="/post/:id" element={<PostPage />} />
           <Route path="/edit/:id" element={<EditPost />} />
+          <Route path="/admin" index element={<IndexPage />} />
         </Route>
       </Routes>
     </UserContextProvider>
