@@ -157,7 +157,7 @@ a svg{
 .delete-btn {
     background-color: white;
     display: inline-flex;
-    width: 20%;
+    width: 15%;
     align-items: center;
     gap: 5px;
     color: black;
