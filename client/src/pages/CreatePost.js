@@ -23,7 +23,7 @@ export default function CreatePost() {
     }
 
     try {
-      const response = await fetch("http://localhost:4000/post", {
+      const response = await fetch("https://api.maisondecorco.com/post", {
         method: "POST",
         body: formData,
         credentials: 'include',
@@ -46,7 +46,7 @@ export default function CreatePost() {
   }
 
   return (
-    <form onSubmit={createNewPost}>
+    <form className="create-post" onSubmit={createNewPost}>
       <input
         type="title"
         placeholder="Title"

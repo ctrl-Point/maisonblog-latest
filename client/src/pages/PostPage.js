@@ -3,18 +3,25 @@ import { useParams, useNavigate } from "react-router-dom";
 import { formatISO9075 } from "date-fns";
 import { UserContext } from "../UserContext";
 import { Link } from "react-router-dom";
+import moment from 'moment';
+
 
 export default function PostPage() {
   const [postInfo, setPostInfo] = useState(null);
+  const [comments, setComments] = useState(null); // New state variable for comments
   const { userInfo } = useContext(UserContext);
   const { id } = useParams();
-  const navigate = useNavigate(); 
+  const navigate = useNavigate();
+  const [name, setName] = useState("");
+  const [comment, setComment] = useState("");
+  const [commentSubmitted, setCommentSubmitted] = useState(false);
+  const [error, setError] = useState("");
 
   const handleDeletePost = async () => {
     const confirmed = window.confirm('Are you sure you want to delete this post?');
     if (!confirmed) return;
     try {
-      const response = await fetch(`http://localhost:4000/post/${id}`, {
+      const response = await fetch(`https://api.maisondecorco.com/post/${id}`, {
         method: 'DELETE',
         credentials: 'include', // Include cookies for authentication
       });
@@ -32,18 +39,70 @@ export default function PostPage() {
   };
 
   useEffect(() => {
-    fetch(`http://localhost:4000/post/${id}`)
-      .then((response) => response.json())
-      .then((postInfo) => setPostInfo(postInfo))
-      .catch((error) => console.error("Error fetching post:", error));
+    const fetchData = async () => {
+      try {
+        const [postResponse, commentsResponse] = await Promise.all([
+          fetch(`https://api.maisondecorco.com/post/${id}`),
+          fetch(`https://api.maisondecorco.com/post/${id}/comments`), // New comment fetch
+        ]);
+
+        if (!postResponse.ok || !commentsResponse.ok) {
+          throw new Error('Error fetching post or comments');
+        }
+
+        const postInfo = await postResponse.json();
+        const comments = await commentsResponse.json();
+        setPostInfo(postInfo);
+        setComments(comments); // Add state variable and setter for comments
+      } catch (error) {
+        console.error("Error fetching post or comments:", error);
+      }
+    };
+
+    fetchData();
   }, [id]); // Dependency array ensures fetch runs only when `id` changes
 
-  if (!postInfo) return "";
+  const handleSubmitComment = async (event) => {
+    event.preventDefault();
+
+    if (!name.trim() || !comment.trim()) {
+      setError("Please enter your name and a comment.");
+      return;
+    }
+
+    try {
+      const response = await fetch(`https://api.maisondecorco.com/comment/${id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ name, comment, id }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to submit comment');
+      }
+
+      const newComment = await response.json();
+
+      console.log('Comment submitted successfully:', newComment);
+
+      setName('');
+      setComment('');
+      setCommentSubmitted(true);
+      setError(""); // Reset error state
+
+    } catch (error) {
+      console.error('Error submitting comment:', error);
+    }
+  };
+
+  if (!postInfo || !comments) return "";
+  const sortedComments = [...comments].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
   return (
     <div className="post-page">
       <h1>{postInfo.title}</h1>
-      <time>{formatISO9075(new Date(postInfo.createdAt))}</time>
+      <time>{formatISO9075(new Date(postInfo.createdAt))}, {moment(postInfo.createdAt).fromNow()}</time>
       <div className="author">by @{postInfo.author.username}</div>
       {userInfo.id === postInfo.author._id && (
         <div className="edit-row">
@@ -62,9 +121,52 @@ export default function PostPage() {
         </div>
       )}
       <div className="image">
-        <img src={`http://localhost:4000/${postInfo.cover}`} alt=""/>
+        <img src={`https://api.maisondecorco.com/${postInfo.cover}`} alt=""/>
       </div>
       <div className="content" dangerouslySetInnerHTML={{__html:postInfo.content}} />
+      <div className="comments-form">
+        <h4>Write Comment</h4>
+        {error && <p style={{ color: 'red' }}>{error}</p>}
+        {commentSubmitted && (
+          <div className="comment-notification">
+            <p style={{ color: 'green' }}>Comment submitted successfully!</p>
+          </div>
+        )}
+        <form onSubmit={handleSubmitComment}>
+          <input
+            type="text"
+            placeholder="Your Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+          <textarea
+            placeholder="Add your comment"
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            maxLength={512}
+          />
+          <button type="submit">Post Comment</button>
+        </form>
+      </div>
+      {postInfo && comments && ( // Render comments if both postInfo and comments are available
+        <div className="comments-section">
+        <h4>Comments ({comments.length})</h4>
+        <div className="comment-list">
+          {sortedComments.map((comment) => (
+            <div key={comment._id} className="media-comment">
+              <div className="media-body u-shadow-v18 g-bg-secondary g-pa-30">
+                <div className="g-mb-15">
+                  <h5 className="h5 g-color-gray-dark-v1 mb-0">{comment.name}</h5>
+                  <span className="g-color-gray-dark-v4 g-font-size-12">{moment(comment.createdAt).fromNow()}</span>
+                </div>
+                <p className="p-comment">{comment.comment}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      
+      )}
     </div>
   );
 }

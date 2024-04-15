@@ -3,6 +3,7 @@ const cors = require('cors');
 const mongoose = require("mongoose");
 const User = require('./models/User');
 const Post = require('./models/Post');
+const Comment = require('./models/Comment');
 const bcrypt = require('bcryptjs');
 const app = express();
 const jwt = require('jsonwebtoken');
@@ -14,7 +15,7 @@ const fs = require('fs');
 const salt = bcrypt.genSaltSync(10);
 const secret = 'asdfe45we45w345wegw345werjktjwertkj';
 
-app.use(cors({ credentials: true, origin: 'http://localhost:3000' }));
+app.use(cors({ credentials: true, origin: 'https://blog.maisondecorco.com' }));
 app.use(express.json());
 app.use(cookieParser());
 app.use('/uploads', express.static(__dirname + '/uploads'));
@@ -208,5 +209,78 @@ app.delete('/post/:id', async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+async function handleLikeDislike(id, likeStatus) {
+  if (likeStatus === undefined || typeof likeStatus !== 'boolean') {
+    return { error: 'Invalid like status (must be true or false)' };
+  }
+
+  try {
+    const postDoc = await Post.findById(id);
+    if (!postDoc) {
+      return { error: 'Post not found' };
+    }
+
+    if (likeStatus) {
+      postDoc.likes++;
+    } else {
+      postDoc.dislikes++;
+    }
+    await postDoc.save();
+
+    // Fetch the updated post document with new like/dislike count
+    const updatedPost = await Post.findById(id).populate('author', ['username']);
+
+    return updatedPost;
+  } catch (error) {
+    console.error(error);
+    return { error: 'Internal server error' };
+  }
+}
+
+app.post('/like-dislike/:id', async (req, res) => {
+  const { id } = req.params;
+  const { like } = req.body; // Extract like status from request body
+  console.log(req.body)
+  // Implement authentication check here (e.g., using token verification)
+
+  const likeDislikeResult = await handleLikeDislike(id, like);
+  if (likeDislikeResult.error) {
+    return res.status(400).json(likeDislikeResult);
+  }
+
+  res.json(likeDislikeResult);
+});
+
+app.post('/comment/:id', async (req, res) => {
+  try {
+    const { name, comment, id } = req.body; // Extract comment and postId from request body
+
+    const newComment = await new Comment({
+      name,
+      comment,
+      post: id,
+    }).save();
+
+    res.json(newComment);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to create comment' });
+  }
+});
+
+
+app.get('/post/:id/comments', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const comments = await Comment.find({ post: id });
+    res.json(comments);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to fetch comments' });
+  }
+});
+
+
 
 app.listen(4000);
